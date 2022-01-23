@@ -6,3 +6,8 @@ redis-up:
 
 redis-down:
 	docker-compose -f deployments/docker-compose.yaml down
+
+
+build-super:
+	docker build -t faawidia/coreplause  .
+	
