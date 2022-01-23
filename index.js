@@ -2,7 +2,10 @@ const express = require('express')
 const app = express()
 const PORT = process.env.PORT || 3000
 const ws = require('ws');
+const writter = require('./services/writter');
 const messageController = require('./src/message.controller')
+require('dotenv').config()
+
 
 const wsServer = new ws.Server({ noServer: true });
 wsServer.on('connection', socket => {
@@ -26,16 +29,9 @@ app.get('/', (req, res) => {
     res.json(msg)
 })
 
-app.post('/send',(req,res)=> messageController.Send(req,res,wsServer))
+app.post('/send', (req, res) => messageController.Send(req, res, wsServer))
 app.get('/histories', messageController.Histories)
-
-// app.get('/trigger', (req, res) => {
-//     wsServer.clients.forEach(client => client.send('Webpack has recompiled'));
- 
-//     res.json("OKKK")
-// })
-
-
+app.post('/validate', messageController.validateAndSetUser)
 
 
 server.on('upgrade', (request, socket, head) => {

@@ -1,4 +1,5 @@
 const redisCli = require('../services/redis')
+const writter = require('../services/writter')
 
 const Controller = {
     Send: async (req, res, Ws) => {
@@ -6,13 +7,11 @@ const Controller = {
         const payload = {}
 
         if (message === undefined || message === null || message === "") {
-            res.status(400).json({ success: false, message: "message is empty" })
-            res.end()
+            return res.status(400).json({ success: false, message: "message is empty" })
         }
 
         if (owner === undefined || owner === null || owner === "") {
-            res.status(400).json({ success: false, message: "owner is empty" })
-            res.end()
+            return res.status(400).json({ success: false, message: "owner is empty" })
         }
 
         const dateTime = new Date
@@ -30,24 +29,60 @@ const Controller = {
 
         Ws.clients.forEach(client => client.send('COREPLAUSE::UPDATE_MESSAGE'));
 
-        res.json({
+        return res.json({
             success: true,
             key: keyFormat,
             payload: JSON.parse(value),
         })
     },
     Histories: async (req, res) => {
-        const keys = await redisCli.keys("MESSAGE-*")
-        const value = await redisCli.mGet(keys)
         const payload = []
-        value.forEach((result) => payload.push(JSON.parse(result)))
-        payload.sort((a, b) => (a.timestamp < b.timestamp) ? -1 : ((a.timestamp > b.timestamp) ? 1 : 0))
-        res.json({
+        try {
+            const keys = await redisCli.keys("MESSAGE-*")
+            const value = await redisCli.mGet(keys)
+            value.forEach((result) => payload.push(JSON.parse(result)))
+            payload.sort((a, b) => (a.timestamp < b.timestamp) ? -1 : ((a.timestamp > b.timestamp) ? 1 : 0))
+            return res.json({
+                success: true,
+                payload: payload,
+                request_time: new Date
+            })
+        } catch (error) {
+            console.log("Histories().error", error)
+            return res.status(404).json({
+                success: false,
+                payload: payload,
+                request_time: new Date
+            })
+        }
+
+    },
+    validateAndSetUser: async (req, res) => {
+
+        const { user } = req.body
+
+        if (user === undefined || user === null || user === "") {
+            return res.status(400).json({ success: false, message: "user is empty", request_time: new Date })
+        }
+
+        let isExist = await writter.checkUser(user)
+
+        if (isExist) {
+            return res.status(200).json({
+                success: false,
+                message: "user is exist",
+                request_time: new Date
+            })
+        }
+
+        await writter.writeUser(user)
+
+        return res.status(200).json({
             success: true,
-            payload: payload,
+            message: "user is not exist",
             request_time: new Date
         })
-    },
+    }
 }
 
 module.exports = Controller
